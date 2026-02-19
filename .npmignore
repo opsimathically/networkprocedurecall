@@ -1,0 +1,17 @@
+.dist/
+docs/
+node_modules/
+src/
+.git/
+.vscode/
+tests/
+test/
+example/
+examples/
+eslint.config.mjs
+tsconfig.json
+.prettierrc
+.github/
+ts-to-zod.config.mjs
+tsup.config.ts
+typedoc.json
