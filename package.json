@@ -43,6 +43,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@opsimathically/workerprocedurecall": "^0.0.1",
     "@swc/core": "^1.11.24",
     "@types/command-line-args": "^5.2.3",
     "@types/command-line-usage": "^5.0.4",
