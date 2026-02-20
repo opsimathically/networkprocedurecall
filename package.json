@@ -1,7 +1,7 @@
 {
-  "name": "@opsimathically/set_project_name",
+  "name": "@opsimathically/networkprocedurecall",
   "version": "0.0.1",
-  "description": "Set project description.",
+  "description": "Provides a certificate-authenticated network interface for @opsimathically/workerprocedurecall using private-CA mTLS.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -14,7 +14,7 @@
   "keywords": [
     "set_keywords"
   ],
-  "homepage": "https://github.com/opsimathically/set_project_name",
+  "homepage": "https://github.com/opsimathically/networkprocedurecall",
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.19.1",
@@ -37,7 +37,7 @@
   "license": "SEE LICENSE IN LICENSE.txt",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/opsimathically/set_project_name.git"
+    "url": "git+https://github.com/opsimathically/networkprocedurecall.git"
   },
   "publishConfig": {
     "access": "public"
