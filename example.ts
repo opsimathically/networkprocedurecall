@@ -12,6 +12,12 @@
  *
  * 3. Network server (mTLS):
  *    - Two `NetworkProcedureCall` servers are started on localhost:6767 and localhost:6768.
+ *    - Both servers include explicit `abuse_controls` to demonstrate handshake DoS and
+ *      request-rate protections:
+ *      - connection admission limits (global/per-IP windows, handshake caps)
+ *      - pre-auth timeout (drop sockets that do not send `auth` quickly)
+ *      - per-connection, per-API-key, and per-IP request token-bucket limiters
+ *      - failed-auth throttling + temporary blocklist windows
  *    - The auth callback validates API key and confirms TLS peer identity metadata exists.
  *    - On success, privileges are returned (`all_privileges` in this example).
  *
@@ -24,6 +30,7 @@
  *    - Uses `networkprocedurecallclient.all_servers` to define dependency/constant/function on both servers.
  *    - Invokes the remote function on all servers and prints per-server result maps.
  *    - Undefines dependency/constant/function on all servers and shows post-undefine error results.
+ *    - Prints each server's in-memory abuse metrics before shutdown.
  *    - Disconnects all client sessions and stops both servers and both worker runtimes.
  */
 import fs from 'node:fs';
@@ -349,6 +356,54 @@ function ReadTlsMaterial(params: {
     return 'failed' as const;
   };
 
+  const abuse_controls = {
+    connection_controls: {
+      max_concurrent_sockets: 256,
+      max_concurrent_handshakes: 64,
+      max_unauthenticated_sessions: 64,
+      global_connection_window_ms: 1_000,
+      global_max_new_connections_per_window: 128,
+      per_ip_max_new_connections_per_window: 32,
+      tls_handshake_timeout_ms: 5_000,
+      auth_message_timeout_ms: 5_000,
+      max_pre_auth_frame_bytes: 64 * 1024,
+      max_post_auth_frame_bytes: 1_048_576
+    },
+    auth_controls: {
+      pending_auth_window_ms: 10_000,
+      max_pending_auth_attempts_per_ip_per_window: 60,
+      failed_auth_window_ms: 60_000,
+      max_failed_auth_per_ip_per_window: 10,
+      max_failed_auth_per_api_key_per_window: 10,
+      block_duration_ms: 30_000,
+      enable_blocklist: true
+    },
+    request_controls: {
+      max_in_flight_requests_per_connection: 128,
+      per_connection: {
+        enabled: true,
+        tokens_per_interval: 200,
+        interval_ms: 1_000,
+        burst_tokens: 400,
+        disconnect_on_limit: false
+      },
+      per_api_key: {
+        enabled: true,
+        tokens_per_interval: 1_000,
+        interval_ms: 1_000,
+        burst_tokens: 2_000,
+        disconnect_on_limit: false
+      },
+      per_ip: {
+        enabled: true,
+        tokens_per_interval: 500,
+        interval_ms: 1_000,
+        burst_tokens: 1_000,
+        disconnect_on_limit: false
+      }
+    }
+  };
+
   await networkprocedurecall_server_1.start({
     information: {
       server_name: 'server_1'
@@ -363,6 +418,7 @@ function ReadTlsMaterial(params: {
       ca_pem: tls_material.ca_cert_pem,
       min_version: 'TLSv1.3'
     },
+    abuse_controls,
     auth_callback
   });
 
@@ -380,6 +436,7 @@ function ReadTlsMaterial(params: {
       ca_pem: tls_material.ca_cert_pem,
       min_version: 'TLSv1.3'
     },
+    abuse_controls,
     auth_callback
   });
 
@@ -477,6 +534,8 @@ function ReadTlsMaterial(params: {
 
   const disconnect_results = await networkprocedurecallclient.all_servers.disconnect();
   console.log('all_servers.disconnect results:', disconnect_results);
+  console.log('server_1 abuse metrics:', networkprocedurecall_server_1.getAbuseMetrics());
+  console.log('server_2 abuse metrics:', networkprocedurecall_server_2.getAbuseMetrics());
 
   await networkprocedurecall_server_1.stop();
   await networkprocedurecall_server_2.stop();
